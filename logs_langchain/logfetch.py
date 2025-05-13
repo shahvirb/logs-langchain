@@ -40,6 +40,7 @@ if __name__ == "__main__":
     if not os.path.exists(LOG_FILE):
         logging.error(f"Log file does not exist: {LOG_FILE}")
         raise FileNotFoundError(f"Log file does not exist: {LOG_FILE}")
+    
     file_contents = tail(LOG_FILE, LINES_TO_FETCH)
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You going to analyze the log file. Respond concisely."),
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     ])
     llm = factory.llm_factory()
     chain = prompt | llm | StrOutputParser()
+    
     try:
         logging.debug("Invoking LLM chain for log analysis.")
         response = chain.invoke({"file_contents": file_contents})
