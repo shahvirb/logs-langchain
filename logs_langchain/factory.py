@@ -6,6 +6,7 @@ def llm_factory():
     load_dotenv()
     google_api_key = os.getenv("GOOGLE_API_KEY")
     if not google_api_key:
+        # TODO this function should adapt based on what API key has been set
         print("Error: GOOGLE_API_KEY not found in environment variables.")
         print("Please make sure you have a .env file with GOOGLE_API_KEY='YOUR_KEY' in it.")
         exit()
