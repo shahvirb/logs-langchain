@@ -4,10 +4,12 @@ from langchain_core.output_parsers import StrOutputParser
 
 llm = factory.llm_factory()
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful AI assistant. Respond concisely."),
-    ("user", "Tell me a short fact about {topic}.")
-])
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful AI assistant. Respond concisely."),
+        ("user", "Tell me a short fact about {topic}."),
+    ]
+)
 
 chain = prompt | llm | StrOutputParser()
 

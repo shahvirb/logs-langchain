@@ -9,3 +9,8 @@ dependencies = [
     "langchain-core>=0.3.59",
     "langchain-google-genai>=2.1.4",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+]
