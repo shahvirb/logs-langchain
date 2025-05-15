@@ -13,26 +13,10 @@ LINES_TO_FETCH = 100
 
 def tail(filename, n):
     logging.debug(f"Fetching last {n} lines from {filename}")
-    with open(filename, "rb") as f:
-        f.seek(0, os.SEEK_END)
-        end = f.tell()
-        lines = []
-        line = b""
-        pos = end
-        while pos > 0 and len(lines) < n:
-            pos -= 1
-            f.seek(pos)
-            char = f.read(1)
-            if char == b"\n":
-                if line:
-                    lines.append(line[::-1].decode())
-                    line = b""
-            else:
-                line += char
-        if line:
-            lines.append(line[::-1].decode())
-        logging.debug(f"Fetched {len(lines)} lines from {filename}")
-        return "\n".join(lines[::-1])
+    with open(filename, "r", encoding="utf-8", errors="replace") as f:
+        lines = f.readlines()
+    result = "".join(lines[-n:])
+    return result
 
 
 if __name__ == "__main__":
