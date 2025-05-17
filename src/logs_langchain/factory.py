@@ -3,8 +3,11 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import logging
 
+
 class GoogleFactory:
-    def __init__(self, modelstr="gemini-2.0-flash", embedding_model="models/embedding-001"):
+    def __init__(
+        self, modelstr="gemini-2.0-flash", embedding_model="models/embedding-001"
+    ):
         load_dotenv()
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         if not self.google_api_key:
