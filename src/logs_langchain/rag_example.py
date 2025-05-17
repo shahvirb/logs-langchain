@@ -23,11 +23,16 @@ text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=20
 all_splits = text_splitter.split_documents(docs)
 
 # Index chunks
+factory = factory.GoogleFactory()
+llm = factory.llm()
+embeddings = factory.embeddings()
+
 vector_store = Chroma(
-    collection_name="all",
+    collection_name="rag_example",
+    embedding_function=embeddings,
     persist_directory="./temp/chroma_langchain_db",  # Where to save data locally, remove if not necessary
 )
-_ = vector_store.add_documents(documents=all_splits)
+doc_ids = vector_store.add_documents(documents=all_splits)
 
 # Define prompt for question-answering
 prompt = hub.pull("rlm/rag-prompt")
@@ -57,3 +62,6 @@ def generate(state: State):
 graph_builder = StateGraph(State).add_sequence([retrieve, generate])
 graph_builder.add_edge(START, "retrieve")
 graph = graph_builder.compile()
+
+response = graph.invoke({"question": "What is Task Decomposition?"})
+print(response["answer"])
