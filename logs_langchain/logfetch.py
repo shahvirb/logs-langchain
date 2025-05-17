@@ -1,6 +1,6 @@
 import os
 import logging
-from logs_langchain import factory
+import factory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -31,7 +31,8 @@ if __name__ == "__main__":
             ("user", "Tell me about this log file: {file_contents}"),
         ]
     )
-    llm = factory.llm_factory()
+    f = factory.GoogleFactory()
+    llm = f.llm()
     chain = prompt | llm | StrOutputParser()
 
     try:

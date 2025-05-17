@@ -1,8 +1,10 @@
-from logs_langchain import factory
+# from logs_langchain import factory
+import factory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-llm = factory.llm_factory()
+f = factory.GoogleFactory()
+llm = f.llm()
 
 prompt = ChatPromptTemplate.from_messages(
     [
