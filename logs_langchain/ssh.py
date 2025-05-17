@@ -19,7 +19,9 @@ class SSHClient:
 
     def __enter__(self):
         self.connection = Connection(
-            host=self.host, user=self.user, connect_kwargs={"key_filename": self.key_filename}
+            host=self.host,
+            user=self.user,
+            connect_kwargs={"key_filename": self.key_filename},
         )
         return self
 
@@ -38,9 +40,7 @@ class SSHClient:
         if output is not None:
             self.logger.info("Remote command output: %s", output)
         file_size = os.path.getsize(local)
-        self.logger.info(
-            "Downloaded %s to %s (size: %s)", remote, local, file_size
-        )
+        self.logger.info("Downloaded %s to %s (size: %s)", remote, local, file_size)
 
     def close(self):
         if self.connection:
