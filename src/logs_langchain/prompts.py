@@ -58,3 +58,16 @@ agent_identification = ChatPromptTemplate.from_messages(
         ("user", "{question}"),
     ]
 )
+
+linux_command_determination = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            You are an expert Linux sysadmin. You will determine and return the linux shell commands as the next step in our debugging process. You will never say anything other than shell commands to debug. Read the following question carefully now and identify your next steps and be sure to return only the shell commands. You will always assume you are debugging from inside the server, in other words you have already SSH'd inside.
+
+            """,
+        ),
+        ("user", "Question: {question}"),
+    ]
+)

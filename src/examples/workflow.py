@@ -82,7 +82,9 @@ if __name__ == "__main__":
                             )
                             print(f"Answer based on logs:\n{answer}")
                     case "run_command":
-                        pass
+                        cmd_chain = prompts.linux_command_determination | llm | StrOutputParser()
+                        command_answer = cmd_chain.invoke({"question": original_question})
+                        print(f"Command to run: {command_answer}")
                     case _:
                         print(f"Unknown agent_id: {agent_id}")
 
