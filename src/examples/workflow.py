@@ -25,7 +25,7 @@ if __name__ == "__main__":
         embeddings, persist_directory="./temp/chroma_logs_langchain"
     )
 
-    original_question = "Is the docker container caddy running in server helium?"
+    original_question = "In the server helium go look inside the docker logs for a container named caddy and tell me if there are any errors"
 
     agent_id_chain = prompts.agent_identification | llm | StrOutputParser()
     agent_id = agent_id_chain.invoke({"question": original_question})
