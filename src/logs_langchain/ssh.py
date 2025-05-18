@@ -7,7 +7,13 @@ logger = logging.getLogger(__name__)
 
 
 class SSHClient:
-    def __init__(self, host: str, user: str, key_filename: str, logger: Optional[logging.Logger] = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        key_filename: str,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
         self.host = host
         self.user = user
         self.key_filename = key_filename
@@ -22,7 +28,12 @@ class SSHClient:
         )
         return self
 
-    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[Any]) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any],
+    ) -> None:
         if self.connection:
             self.connection.close()
 
