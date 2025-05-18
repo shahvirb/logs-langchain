@@ -1,19 +1,20 @@
 from fabric import Connection
 import logging
 import os
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
 
 class SSHClient:
-    def __init__(self, host, user, key_filename, logger=None):
+    def __init__(self, host: str, user: str, key_filename: str, logger: Optional[logging.Logger] = None) -> None:
         self.host = host
         self.user = user
         self.key_filename = key_filename
         self.logger = logger or logging.getLogger(__name__)
-        self.connection = None
+        self.connection: Optional[Connection] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "SSHClient":
         self.connection = Connection(
             host=self.host,
             user=self.user,
@@ -21,15 +22,15 @@ class SSHClient:
         )
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[Any]) -> None:
         if self.connection:
             self.connection.close()
 
-    def run_command(self, command):
+    def run_command(self, command: str) -> str:
         result = self.connection.run(command, hide=True)
         return result.stdout.strip()
 
-    def download(self, remote, local, output=None):
+    def download(self, remote: str, local: str, output: Optional[str] = None) -> None:
         self.connection.get(remote, local=local)
         self.logger.debug(f"{remote} downloaded to {local}")
 
@@ -38,7 +39,7 @@ class SSHClient:
         file_size = os.path.getsize(local)
         self.logger.info("Downloaded %s to %s (size: %s)", remote, local, file_size)
 
-    def close(self):
+    def close(self) -> None:
         if self.connection:
             self.connection.close()
 
