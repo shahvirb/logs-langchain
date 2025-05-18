@@ -1,7 +1,11 @@
-import os
+from chromadb.config import Settings
 from dotenv import load_dotenv
+from langchain_chroma import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleFactory:
@@ -27,3 +31,14 @@ class GoogleFactory:
 
     def embeddings(self) -> GoogleGenerativeAIEmbeddings:
         return GoogleGenerativeAIEmbeddings(model=self.embedding_model)
+
+
+def vector_store(emb_func, persist_directory: str = None):
+    vector_store = Chroma(
+        client_settings=Settings(anonymized_telemetry=False),
+        collection_name="lograg",
+        embedding_function=emb_func,
+        persist_directory=persist_directory,
+    )
+    logger.info("Chroma vector store initialized")
+    return vector_store

@@ -7,32 +7,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def show_vector_store_statistics(vector_store):
     all_docs = vector_store.get(include=["metadatas", "documents"])
     fp = set()
     for metadata in all_docs.get("metadatas", []):
         if metadata and "filepath" in metadata:
             fp.add(metadata["filepath"])
-    logger.info(f"Found {len(fp)} unique filepaths across {len(all_docs.get('documents', []))} documents in the vector store.")
-
+    logger.info(
+        f"Found {len(fp)} unique filepaths across {len(all_docs.get('documents', []))} documents in the vector store."
+    )
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    factory = factory.GoogleFactory()
-    llm = factory.llm()
-    embeddings = factory.embeddings()
+    google_factory = factory.GoogleFactory()
+    llm = google_factory.llm()
+    embeddings = google_factory.embeddings()
     logger.info("LLM and embeddings initialized")
-
-    vector_store = Chroma(
-        client_settings=Settings(anonymized_telemetry=False),
-        collection_name="lograg",
-        embedding_function=embeddings,
-        # persist_directory=None,
-        persist_directory="./temp/chroma_logs_langchain",
+    vector_store = factory.vector_store(
+        embeddings, persist_directory="./temp/chroma_logs_langchain"
     )
-    logger.info("Chroma vector store initialized")
 
     ingest.ingest_files(["temp/syslog"], vector_store)
 
