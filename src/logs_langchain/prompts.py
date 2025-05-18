@@ -71,3 +71,14 @@ linux_command_determination = ChatPromptTemplate.from_messages(
         ("user", "Question: {question}"),
     ]
 )
+expert_linux_debugger = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command its output to answer their question.
+            """,
+        ),
+        ("user", "Question: {question}\nDebug Command: {command}\nOutput of running debug command:\n{output}"),
+    ]
+)

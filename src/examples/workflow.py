@@ -5,6 +5,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def get_user_consent(prompt_message):
+    consent = input(f"{prompt_message} (y/n): ").strip().lower()
+    if consent != "y":
+        print("Consent violated. Exiting.")
+        exit(0)
+    return True
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -15,9 +24,9 @@ if __name__ == "__main__":
     vector_store = factory.vector_store(
         embeddings, persist_directory="./temp/chroma_logs_langchain"
     )
-    
-    original_question = "Is the docker container plex running in server helium?"
-    
+
+    original_question = "Is the docker container caddy running in server helium?"
+
     agent_id_chain = prompts.agent_identification | llm | StrOutputParser()
     agent_id = agent_id_chain.invoke({"question": original_question})
     print(f"Invoking agent: {agent_id}")
@@ -35,12 +44,9 @@ if __name__ == "__main__":
             assert False
         else:
             print(f"Found host: {hostname}")
-            consent = (
-                input(f"Do you want to connect to {hostname}? (y/n): ").strip().lower()
-            )
-            if consent != "y":
-                print("Consent failed. Exiting.")
-                exit(0)
+
+            get_user_consent(f"Do you want to connect to {hostname}?")
+
             # Use the SSH client to connect to the server
             ssh_client = ssh.SSHClient(
                 host=hostname,
@@ -72,21 +78,47 @@ if __name__ == "__main__":
                             # Ask the original_question again but now with syslog content
 
                             followup_chain = (
-                                prompts.sysadmin_log_context_answer | llm | StrOutputParser()
+                                prompts.sysadmin_log_context_answer
+                                | llm
+                                | StrOutputParser()
                             )
                             # Truncate syslog_content to avoid exceeding token limit (e.g., first 10000 characters)
                             max_syslog_length = 10000
                             truncated_syslog = syslog_content[:max_syslog_length]
                             answer = followup_chain.invoke(
-                                {"question": original_question, "logs": truncated_syslog}
+                                {
+                                    "question": original_question,
+                                    "logs": truncated_syslog,
+                                }
                             )
                             print(f"Answer based on logs:\n{answer}")
                     case "run_command":
-                        cmd_chain = prompts.linux_command_determination | llm | StrOutputParser()
-                        command_answer = cmd_chain.invoke({"question": original_question})
+                        cmd_chain = (
+                            prompts.linux_command_determination
+                            | llm
+                            | StrOutputParser()
+                        )
+                        command_answer = cmd_chain.invoke(
+                            {"question": original_question}
+                        )
                         print(f"Command to run: {command_answer}")
+                        get_user_consent(f"Do you want to run the command?")
+                        run_output = ssh_client.run_command(command_answer)
+                        print(run_output)
+                        
+                        # Now let's ask the original question again but with the 
+                        debug_chain = (
+                            prompts.expert_linux_debugger
+                            | llm
+                            | StrOutputParser()
+                        )
+                        debug_answer = debug_chain.invoke({"question": original_question, "command": command_answer, "output": run_output})
+                        print(f"Expert debugger answer:\n{debug_answer}")
                     case _:
                         print(f"Unknown agent_id: {agent_id}")
+            
+
+                
 
     # Ingest files into the vector store
     # file_paths = ["./src/examples/agent.py"]
