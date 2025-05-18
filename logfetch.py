@@ -1,11 +1,12 @@
-import os
-import logging
-from logs_langchain import factory
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+#!/usr/bin/env -S uv run --script
 
-# Set up basic logging configuration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+import logging
+import os
+
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+from logs_langchain import factory
 
 LOG_FILE = "/var/log/syslog"  # Path to the log file
 LINES_TO_FETCH = 100
@@ -20,6 +21,9 @@ def tail(filename, n):
 
 
 if __name__ == "__main__":
+    # Set up basic logging configuration
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
     if not os.path.exists(LOG_FILE):
         logging.error(f"Log file does not exist: {LOG_FILE}")
         raise FileNotFoundError(f"Log file does not exist: {LOG_FILE}")
