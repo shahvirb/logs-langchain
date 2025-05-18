@@ -6,8 +6,10 @@ import logging
 
 class GoogleFactory:
     def __init__(
-        self, modelstr="gemini-2.0-flash", embedding_model="models/embedding-001"
-    ):
+        self,
+        modelstr: str = "gemini-2.0-flash",
+        embedding_model: str = "models/embedding-001",
+    ) -> None:
         load_dotenv()
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         if not self.google_api_key:
@@ -20,8 +22,8 @@ class GoogleFactory:
         self.modelstr = modelstr
         self.embedding_model = embedding_model
 
-    def llm(self):
+    def llm(self) -> ChatGoogleGenerativeAI:
         return ChatGoogleGenerativeAI(model=self.modelstr)
 
-    def embeddings(self):
+    def embeddings(self) -> GoogleGenerativeAIEmbeddings:
         return GoogleGenerativeAIEmbeddings(model=self.embedding_model)
