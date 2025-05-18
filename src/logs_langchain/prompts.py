@@ -29,3 +29,32 @@ sysadmin_log_context_answer = ChatPromptTemplate.from_messages(
         ("user", "User's Question: {question}\n\nLogs:\n{logs}"),
     ]
 )
+
+agent_identification = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            You are an action router for an AI agent system. Your task is to analyze user requests and determine which of the following predefined actions should be performed:
+
+            1.  **read_syslog**: This action involves reading and analyzing system log files (syslog).
+            2.  **run_command**: This action involves executing a command and analyzing its output.
+
+            Based on the user's request provided below, identify if it aligns with either the 'read_syslog' or 'run_command' action.
+
+            Your output must be **only** one of the following exact literals:
+            * `read_syslog`
+            * `run_command`
+            * `NONE`
+
+            If the user's request clearly indicates the need to read or analyze system logs, output `read_syslog`.
+            If the user's request clearly indicates the need to execute a command or analyze the output of a command, output `run_command`.
+            If the user's request does not clearly match either 'read_syslog' or 'run_command', output `NONE`.
+
+            Do not include any other text, explanation, or punctuation in your output besides the exact literal.
+
+            """,
+        ),
+        ("user", "{question}"),
+    ]
+)

@@ -15,10 +15,16 @@ if __name__ == "__main__":
     vector_store = factory.vector_store(
         embeddings, persist_directory="./temp/chroma_logs_langchain"
     )
+    
+    original_question = "Is the docker container plex running in server helium?"
+    
+    agent_id_chain = prompts.agent_identification | llm | StrOutputParser()
+    agent_id = agent_id_chain.invoke({"question": original_question})
+    print(f"Invoking agent: {agent_id}")
+    assert agent_id != "NONE"
 
-    chain = prompts.server_name_identification | llm | StrOutputParser()
-    original_question = "What is happening with plex in server helium?"
-    hostname = chain.invoke({"question": original_question})
+    server_name_chain = prompts.server_name_identification | llm | StrOutputParser()
+    hostname = server_name_chain.invoke({"question": original_question})
     print(f"Original Question: {original_question}")
     print(f"Host Identified: {hostname}")
 
@@ -26,6 +32,7 @@ if __name__ == "__main__":
         foundhost = hosts.HOSTS.get(hostname, None)
         if foundhost is None:
             print(f"Host {hostname} not found in HOSTS dictionary.")
+            assert False
         else:
             print(f"Found host: {hostname}")
             consent = (
@@ -47,31 +54,37 @@ if __name__ == "__main__":
                 output = ssh_client.run_command(command)
                 print(output)
 
-                # Let's fetch syslog now using ssh_client.download
-                remote_syslog_path = "/var/log/syslog"
-                local_syslog_path = f"./temp/{hostname}_syslog"
-                try:
-                    ssh_client.download(remote_syslog_path, local_syslog_path)
-                    print(f"Syslog downloaded to {local_syslog_path}")
-                except Exception as e:
-                    print(f"Failed to download syslog: {e}")
+                match agent_id:
+                    case "read_syslog":
+                        # Let's fetch syslog now using ssh_client.download
+                        remote_syslog_path = "/var/log/syslog"
+                        local_syslog_path = f"./temp/{hostname}_syslog"
+                        try:
+                            ssh_client.download(remote_syslog_path, local_syslog_path)
+                            print(f"Syslog downloaded to {local_syslog_path}")
+                        except Exception as e:
+                            print(f"Failed to download syslog: {e}")
 
-                # Now  let's read the downloaded syslog file
-                with open(local_syslog_path, "r") as file:
-                    syslog_content = file.read()
+                        # Now  let's read the downloaded syslog file
+                        with open(local_syslog_path, "r") as file:
+                            syslog_content = file.read()
 
-                    # Ask the original_question again but now with syslog content
+                            # Ask the original_question again but now with syslog content
 
-                    followup_chain = (
-                        prompts.sysadmin_log_context_answer | llm | StrOutputParser()
-                    )
-                    # Truncate syslog_content to avoid exceeding token limit (e.g., first 10000 characters)
-                    max_syslog_length = 10000
-                    truncated_syslog = syslog_content[:max_syslog_length]
-                    answer = followup_chain.invoke(
-                        {"question": original_question, "logs": truncated_syslog}
-                    )
-                    print(f"Answer based on logs:\n{answer}")
+                            followup_chain = (
+                                prompts.sysadmin_log_context_answer | llm | StrOutputParser()
+                            )
+                            # Truncate syslog_content to avoid exceeding token limit (e.g., first 10000 characters)
+                            max_syslog_length = 10000
+                            truncated_syslog = syslog_content[:max_syslog_length]
+                            answer = followup_chain.invoke(
+                                {"question": original_question, "logs": truncated_syslog}
+                            )
+                            print(f"Answer based on logs:\n{answer}")
+                    case "run_command":
+                        pass
+                    case _:
+                        print(f"Unknown agent_id: {agent_id}")
 
     # Ingest files into the vector store
     # file_paths = ["./src/examples/agent.py"]
