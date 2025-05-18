@@ -1,7 +1,6 @@
 from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from logs_langchain import factory, ingest, lograg, hosts, ssh
+from logs_langchain import factory, ingest, lograg, hosts, ssh, prompts
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,18 +16,10 @@ if __name__ == "__main__":
         embeddings, persist_directory="./temp/chroma_logs_langchain"
     )
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "Your sole purpose is to determine what server is being discussed here if any. If you don't know say 'NONE' exactly otherwise return the server name only.",
-            ),
-            ("user", "{user}"),
-        ]
-    )
-    chain = prompt | llm | StrOutputParser()
-    original_question = "What is happening with tailscale in server openmediavault?"
-    hostname = chain.invoke({"user": original_question})
+    chain = prompts.server_name_identification | llm | StrOutputParser()
+    original_question = "What is happening with plex in server helium?"
+    hostname = chain.invoke({"question": original_question})
+    print(f"Original Question: {original_question}")
     print(f"Host Identified: {hostname}")
 
     if hostname != "NONE":
@@ -37,7 +28,9 @@ if __name__ == "__main__":
             print(f"Host {hostname} not found in HOSTS dictionary.")
         else:
             print(f"Found host: {hostname}")
-            consent = input(f"Do you want to connect to {hostname}? (y/n): ").strip().lower()
+            consent = (
+                input(f"Do you want to connect to {hostname}? (y/n): ").strip().lower()
+            )
             if consent != "y":
                 print("Consent failed. Exiting.")
                 exit(0)
@@ -49,12 +42,36 @@ if __name__ == "__main__":
                 logger=logger,
             )
             with ssh_client:
-                # Example command to run on the remote server
+                # Run an echo command to test the connection
                 command = f"echo 'Hello from inside {hostname}!'"
                 output = ssh_client.run_command(command)
                 print(output)
-                
-        
+
+                # Let's fetch syslog now using ssh_client.download
+                remote_syslog_path = "/var/log/syslog"
+                local_syslog_path = f"./temp/{hostname}_syslog"
+                try:
+                    ssh_client.download(remote_syslog_path, local_syslog_path)
+                    print(f"Syslog downloaded to {local_syslog_path}")
+                except Exception as e:
+                    print(f"Failed to download syslog: {e}")
+
+                # Now  let's read the downloaded syslog file
+                with open(local_syslog_path, "r") as file:
+                    syslog_content = file.read()
+
+                    # Ask the original_question again but now with syslog content
+
+                    followup_chain = (
+                        prompts.sysadmin_log_context_answer | llm | StrOutputParser()
+                    )
+                    # Truncate syslog_content to avoid exceeding token limit (e.g., first 10000 characters)
+                    max_syslog_length = 10000
+                    truncated_syslog = syslog_content[:max_syslog_length]
+                    answer = followup_chain.invoke(
+                        {"question": original_question, "logs": truncated_syslog}
+                    )
+                    print(f"Answer based on logs:\n{answer}")
 
     # Ingest files into the vector store
     # file_paths = ["./src/examples/agent.py"]
