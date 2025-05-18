@@ -14,6 +14,47 @@ def get_user_consent(prompt_message):
     return True
 
 
+def handle_read_syslog(ssh_client, hostname, original_question, llm, prompts):
+    remote_syslog_path = "/var/log/syslog"
+    local_syslog_path = f"./temp/{hostname}_syslog"
+    try:
+        ssh_client.download(remote_syslog_path, local_syslog_path)
+        print(f"Syslog downloaded to {local_syslog_path}")
+    except Exception as e:
+        print(f"Failed to download syslog: {e}")
+        return
+    with open(local_syslog_path, "r") as file:
+        syslog_content = file.read()
+    followup_chain = prompts.sysadmin_log_context_answer | llm | StrOutputParser()
+    max_syslog_length = 10000
+    truncated_syslog = syslog_content[:max_syslog_length]
+    answer = followup_chain.invoke(
+        {
+            "question": original_question,
+            "logs": truncated_syslog,
+        }
+    )
+    print(f"Answer based on logs:\n{answer}")
+
+
+def handle_run_command(ssh_client, original_question, llm, prompts, get_user_consent):
+    cmd_chain = prompts.linux_command_determination | llm | StrOutputParser()
+    command_answer = cmd_chain.invoke({"question": original_question})
+    print(f"Command to run: {command_answer}")
+    get_user_consent(f"Do you want to run the command?")
+    run_output = ssh_client.run_command(command_answer)
+    print(run_output)
+    debug_chain = prompts.expert_linux_debugger | llm | StrOutputParser()
+    debug_answer = debug_chain.invoke(
+        {
+            "question": original_question,
+            "command": command_answer,
+            "output": run_output,
+        }
+    )
+    print(f"Expert debugger answer:\n{debug_answer}")
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -60,73 +101,20 @@ if __name__ == "__main__":
                 output = ssh_client.run_command(command)
                 print(output)
 
-                match agent_id:
-                    case "read_syslog":
-                        # Let's fetch syslog now using ssh_client.download
-                        remote_syslog_path = "/var/log/syslog"
-                        local_syslog_path = f"./temp/{hostname}_syslog"
-                        try:
-                            ssh_client.download(remote_syslog_path, local_syslog_path)
-                            print(f"Syslog downloaded to {local_syslog_path}")
-                        except Exception as e:
-                            print(f"Failed to download syslog: {e}")
-
-                        # Now  let's read the downloaded syslog file
-                        with open(local_syslog_path, "r") as file:
-                            syslog_content = file.read()
-
-                            # Ask the original_question again but now with syslog content
-
-                            followup_chain = (
-                                prompts.sysadmin_log_context_answer
-                                | llm
-                                | StrOutputParser()
+                if output.strip():
+                    match agent_id:
+                        case "read_syslog":
+                            handle_read_syslog(
+                                ssh_client, hostname, original_question, llm, prompts
                             )
-                            # Truncate syslog_content to avoid exceeding token limit (e.g., first 10000 characters)
-                            max_syslog_length = 10000
-                            truncated_syslog = syslog_content[:max_syslog_length]
-                            answer = followup_chain.invoke(
-                                {
-                                    "question": original_question,
-                                    "logs": truncated_syslog,
-                                }
+                        case "run_command":
+                            handle_run_command(
+                                ssh_client,
+                                original_question,
+                                llm,
+                                prompts,
+                                get_user_consent,
                             )
-                            print(f"Answer based on logs:\n{answer}")
-                    case "run_command":
-                        cmd_chain = (
-                            prompts.linux_command_determination
-                            | llm
-                            | StrOutputParser()
-                        )
-                        command_answer = cmd_chain.invoke(
-                            {"question": original_question}
-                        )
-                        print(f"Command to run: {command_answer}")
-                        get_user_consent(f"Do you want to run the command?")
-                        run_output = ssh_client.run_command(command_answer)
-                        print(run_output)
-
-                        # Now let's ask the original question again but with the
-                        debug_chain = (
-                            prompts.expert_linux_debugger | llm | StrOutputParser()
-                        )
-                        debug_answer = debug_chain.invoke(
-                            {
-                                "question": original_question,
-                                "command": command_answer,
-                                "output": run_output,
-                            }
-                        )
-                        print(f"Expert debugger answer:\n{debug_answer}")
-                    case _:
-                        print(f"Unknown agent_id: {agent_id}")
-
-    # Ingest files into the vector store
-    # file_paths = ["./src/examples/agent.py"]
-    # ingest.ingest_files(file_paths, vector_store)
-    # show_vector_store_statistics(vector_store)
-
-    # Define prompt for question-answering
-    # prompt = hub.pull("rlm/rag-prompt")
-    # rag_graph = lograg.RAGGraph(prompt, llm, vector_store)
-    # rag_graph.compiled.invoke({"question": "What is happening with tailscale?"})
+                        case _:
+                            print(f"Unknown agent_id: {agent_id}")
+                            assert False
