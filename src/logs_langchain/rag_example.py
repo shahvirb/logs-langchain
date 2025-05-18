@@ -6,7 +6,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langgraph.graph import START, StateGraph
 from typing_extensions import List, TypedDict
 from langchain_chroma import Chroma
-import factory
+from logs_langchain import factory
 
 # Load and chunk contents of the blog
 loader = WebBaseLoader(

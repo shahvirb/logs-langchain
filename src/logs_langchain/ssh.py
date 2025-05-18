@@ -1,10 +1,6 @@
 from fabric import Connection
 import logging
 import os
-import math
-import shutil
-import shutil
-import shutil
 
 logger = logging.getLogger(__name__)
 
