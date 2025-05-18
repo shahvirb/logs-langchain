@@ -1,18 +1,21 @@
-import bs4
+#!/usr/bin/env -S uv run --script
+
+from bs4.filter import SoupStrainer
 from langchain import hub
+from langchain_chroma import Chroma
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langgraph.graph import START, StateGraph
 from typing_extensions import List, TypedDict
-from langchain_chroma import Chroma
-import factory
+
+from logs_langchain import factory
 
 # Load and chunk contents of the blog
 loader = WebBaseLoader(
     web_paths=("https://lilianweng.github.io/posts/2023-06-23-agent/",),
     bs_kwargs=dict(
-        parse_only=bs4.SoupStrainer(
+        parse_only=SoupStrainer(
             class_=("post-content", "post-title", "post-header")
         )
     ),

@@ -1,7 +1,9 @@
-# from logs_langchain import factory
-import factory
-from langchain_core.prompts import ChatPromptTemplate
+#!/usr/bin/env -S uv run --script
+
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+from logs_langchain import factory
 
 f = factory.GoogleFactory()
 llm = f.llm()
