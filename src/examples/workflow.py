@@ -105,20 +105,21 @@ if __name__ == "__main__":
                         get_user_consent(f"Do you want to run the command?")
                         run_output = ssh_client.run_command(command_answer)
                         print(run_output)
-                        
-                        # Now let's ask the original question again but with the 
+
+                        # Now let's ask the original question again but with the
                         debug_chain = (
-                            prompts.expert_linux_debugger
-                            | llm
-                            | StrOutputParser()
+                            prompts.expert_linux_debugger | llm | StrOutputParser()
                         )
-                        debug_answer = debug_chain.invoke({"question": original_question, "command": command_answer, "output": run_output})
+                        debug_answer = debug_chain.invoke(
+                            {
+                                "question": original_question,
+                                "command": command_answer,
+                                "output": run_output,
+                            }
+                        )
                         print(f"Expert debugger answer:\n{debug_answer}")
                     case _:
                         print(f"Unknown agent_id: {agent_id}")
-            
-
-                
 
     # Ingest files into the vector store
     # file_paths = ["./src/examples/agent.py"]

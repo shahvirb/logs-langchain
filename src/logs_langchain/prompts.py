@@ -71,14 +71,18 @@ linux_command_determination = ChatPromptTemplate.from_messages(
         ("user", "Question: {question}"),
     ]
 )
+
 expert_linux_debugger = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             """
-            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command its output to answer their question.
+            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command and its output to deduce the answer to their question. Always begin by giving a one sentence  conclusion. Then explain rationale with supporting evidence provided. If they refer to a hostname or server name you may always assume you are inside the server.
             """,
         ),
-        ("user", "Question: {question}\nDebug Command: {command}\nOutput of running debug command:\n{output}"),
+        (
+            "user",
+            "Question: {question}\nDebug Command: {command}\nOutput of running debug command:\n{output}",
+        ),
     ]
 )
