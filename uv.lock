@@ -1148,12 +1148,13 @@ wheels = [
 [[package]]
 name = "logs-langchain"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "bs4" },
     { name = "chromadb" },
     { name = "dotenv" },
     { name = "fabric" },
+    { name = "langchain" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
     { name = "langchain-core" },
@@ -1173,6 +1174,7 @@ requires-dist = [
     { name = "chromadb", specifier = ">=1.0.9" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fabric", specifier = ">=3.2.2" },
+    { name = "langchain", specifier = ">=0.3.25" },
     { name = "langchain-chroma", specifier = ">=0.2.4" },
     { name = "langchain-community", specifier = ">=0.3.24" },
     { name = "langchain-core", specifier = ">=0.3.59" },
