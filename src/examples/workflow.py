@@ -1,7 +1,9 @@
 from langchain import hub
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from logs_langchain import factory, ingest, lograg, hosts, ssh, prompts
 import logging
+from typing import Optional
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,9 @@ def handle_run_command(ssh_client, original_question, llm, prompts, get_user_con
     print(f"Expert debugger answer:\n{debug_answer}")
 
 
+class ServerName(BaseModel):
+    name: Optional[str] = Field(description="The name of the server the user is asking about")
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -73,31 +78,32 @@ if __name__ == "__main__":
     print(f"Invoking agent: {agent_id}")
     assert agent_id != "NONE"
 
-    server_name_chain = prompts.server_name_identification | llm | StrOutputParser()
-    hostname = server_name_chain.invoke({"question": original_question})
+    server_name_parser = PydanticOutputParser(pydantic_object=ServerName)
+    server_name_chain = prompts.server_name_identification | llm | server_name_parser
+    server_name_answer = server_name_chain.invoke({"question": original_question, "format_instructions": server_name_parser.get_format_instructions()})
     print(f"Original Question: {original_question}")
-    print(f"Host Identified: {hostname}")
+    print(f"Host Identified: {server_name_answer.name}")
 
-    if hostname != "NONE":
-        foundhost = hosts.HOSTS.get(hostname, None)
+    if server_name_answer.name:
+        foundhost = hosts.HOSTS.get(server_name_answer.name, None)
         if foundhost is None:
-            print(f"Host {hostname} not found in HOSTS dictionary.")
+            print(f"Host {server_name_answer.name} not found in HOSTS dictionary.")
             assert False
         else:
-            print(f"Found host: {hostname}")
+            print(f"Found host: {server_name_answer.name}")
 
-            get_user_consent(f"Do you want to connect to {hostname}?")
+            get_user_consent(f"Do you want to connect to {server_name_answer.name}?")
 
             # Use the SSH client to connect to the server
             ssh_client = ssh.SSHClient(
-                host=hostname,
+                host=server_name_answer.name,
                 user=foundhost["username"],
                 key_filename=foundhost["key_file"],
                 logger=logger,
             )
             with ssh_client:
                 # Run an echo command to test the connection
-                command = f"echo 'Hello from inside {hostname}!'"
+                command = f"echo 'Hello from inside {server_name_answer.name}!'"
                 output = ssh_client.run_command(command)
                 print(output)
 
@@ -105,7 +111,7 @@ if __name__ == "__main__":
                     match agent_id:
                         case "read_syslog":
                             handle_read_syslog(
-                                ssh_client, hostname, original_question, llm, prompts
+                                ssh_client, server_name_answer.name, original_question, llm, prompts
                             )
                         case "run_command":
                             handle_run_command(

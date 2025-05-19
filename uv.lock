@@ -1161,6 +1161,7 @@ dependencies = [
     { name = "langchain-google-genai" },
     { name = "langchain-text-splitters" },
     { name = "langgraph" },
+    { name = "pydantic" },
 ]
 
 [package.dev-dependencies]
@@ -1181,6 +1182,7 @@ requires-dist = [
     { name = "langchain-google-genai", specifier = ">=2.1.4" },
     { name = "langchain-text-splitters", specifier = ">=0.3.8" },
     { name = "langgraph", specifier = ">=0.4.5" },
+    { name = "pydantic", specifier = ">=2.11.4" },
 ]
 
 [package.metadata.requires-dev]

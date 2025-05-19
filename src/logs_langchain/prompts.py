@@ -14,6 +14,9 @@ server_name_identification = ChatPromptTemplate.from_messages(
             Output: 'dev'
             Input: 'No server specified in the request.'
             Output: 'NONE'
+            
+            Respect these format instructions for your return value formatting:
+            {format_instructions}
             """,
         ),
         ("user", "Your turn: {question}"),
