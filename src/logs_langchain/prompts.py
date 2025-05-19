@@ -1,6 +1,15 @@
 from langchain_core.prompts import ChatPromptTemplate
+from typing import Optional
+from pydantic import BaseModel, Field
 
-server_name_identification = ChatPromptTemplate.from_messages(
+
+class ServerName(BaseModel):
+    name: Optional[str] = Field(
+        description="The name of the server the user is asking about"
+    )
+
+
+prompt_server_name_identification = ChatPromptTemplate.from_messages(
     [
         (
             "system",
@@ -22,6 +31,7 @@ server_name_identification = ChatPromptTemplate.from_messages(
         ("user", "Your turn: {question}"),
     ]
 )
+
 
 sysadmin_log_context_answer = ChatPromptTemplate.from_messages(
     [

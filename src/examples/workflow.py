@@ -2,8 +2,6 @@ from langchain import hub
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from logs_langchain import factory, ingest, lograg, hosts, ssh, prompts
 import logging
-from typing import Optional
-from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +55,6 @@ def handle_run_command(ssh_client, original_question, llm, prompts, get_user_con
     print(f"Expert debugger answer:\n{debug_answer}")
 
 
-class ServerName(BaseModel):
-    name: Optional[str] = Field(description="The name of the server the user is asking about")
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
@@ -79,8 +74,15 @@ if __name__ == "__main__":
     assert agent_id != "NONE"
 
     server_name_parser = PydanticOutputParser(pydantic_object=ServerName)
-    server_name_chain = prompts.server_name_identification | llm | server_name_parser
-    server_name_answer = server_name_chain.invoke({"question": original_question, "format_instructions": server_name_parser.get_format_instructions()})
+    server_name_chain = (
+        prompts.prompt_server_name_identification | llm | server_name_parser
+    )
+    server_name_answer = server_name_chain.invoke(
+        {
+            "question": original_question,
+            "format_instructions": server_name_parser.get_format_instructions(),
+        }
+    )
     print(f"Original Question: {original_question}")
     print(f"Host Identified: {server_name_answer.name}")
 
@@ -111,7 +113,11 @@ if __name__ == "__main__":
                     match agent_id:
                         case "read_syslog":
                             handle_read_syslog(
-                                ssh_client, server_name_answer.name, original_question, llm, prompts
+                                ssh_client,
+                                server_name_answer.name,
+                                original_question,
+                                llm,
+                                prompts,
                             )
                         case "run_command":
                             handle_run_command(
