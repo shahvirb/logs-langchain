@@ -73,7 +73,7 @@ if __name__ == "__main__":
     print(f"Invoking agent: {agent_id}")
     assert agent_id != "NONE"
 
-    server_name_parser = PydanticOutputParser(pydantic_object=ServerName)
+    server_name_parser = PydanticOutputParser(pydantic_object=prompts.ServerName)
     server_name_chain = (
         prompts.prompt_server_name_identification | llm | server_name_parser
     )
