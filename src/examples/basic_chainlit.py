@@ -11,9 +11,7 @@ import chainlit as cl
 
 @cl.on_chat_start
 async def on_chat_start():
-    # llm = ChatOpenAI(streaming=True)
     gfactory = factory.GoogleFactory()
-    # llm = gfactory.llm(streaming=True)
     llm = gfactory.llm()
     prompt = ChatPromptTemplate.from_messages(
         [
