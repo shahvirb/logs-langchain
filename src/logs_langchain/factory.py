@@ -23,7 +23,9 @@ class GoogleFactory:
     def llm(self, model: str = "gemini-2.0-flash", **kwargs) -> ChatGoogleGenerativeAI:
         return ChatGoogleGenerativeAI(model=model, **kwargs)
 
-    def embeddings(self, model: str = "models/embedding-001", **kwargs) -> GoogleGenerativeAIEmbeddings:
+    def embeddings(
+        self, model: str = "models/embedding-001", **kwargs
+    ) -> GoogleGenerativeAIEmbeddings:
         return GoogleGenerativeAIEmbeddings(model=model, **kwargs)
 
 
