@@ -9,11 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class GoogleFactory:
-    def __init__(
-        self,
-        modelstr: str = "gemini-2.0-flash",
-        embedding_model: str = "models/embedding-001",
-    ) -> None:
+    def __init__(self) -> None:
         load_dotenv()
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         if not self.google_api_key:
@@ -23,14 +19,12 @@ class GoogleFactory:
             )
             exit()
         logging.info("GOOGLE_API_KEY successfully loaded from environment.")
-        self.modelstr = modelstr
-        self.embedding_model = embedding_model
 
-    def llm(self) -> ChatGoogleGenerativeAI:
-        return ChatGoogleGenerativeAI(model=self.modelstr)
+    def llm(self, model: str = "gemini-2.0-flash", **kwargs) -> ChatGoogleGenerativeAI:
+        return ChatGoogleGenerativeAI(model=model, **kwargs)
 
-    def embeddings(self) -> GoogleGenerativeAIEmbeddings:
-        return GoogleGenerativeAIEmbeddings(model=self.embedding_model)
+    def embeddings(self, model: str = "models/embedding-001", **kwargs) -> GoogleGenerativeAIEmbeddings:
+        return GoogleGenerativeAIEmbeddings(model=model, **kwargs)
 
 
 def vector_store(emb_func, persist_directory: str = None):
