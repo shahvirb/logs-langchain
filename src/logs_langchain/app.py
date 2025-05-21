@@ -1,13 +1,11 @@
-from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable.config import RunnableConfig
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
-from logs_langchain import factory
+from logs_langchain import factory, prompts
 from typing import cast, Literal
 import chainlit as cl
 import logging
@@ -37,7 +35,20 @@ def gen_number(a: int, b: int) -> int:
     return random.randint(a, b)
 
 
-tools = [get_weather, gen_number]
+@tool
+def read_local_file(file_path: str) -> str:
+    """Use this tool to read the contents of a local file when the user asks to read a file.
+    The file_path should be a valid path on the local system.
+    If the file doesn't exist or can't be read, this will return an error message."""
+    try:
+        with open(file_path, "r") as f:
+            content = f.read()
+        return content
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
+
+
+tools = [get_weather, gen_number, read_local_file]
 llm = llm.bind_tools(tools)
 tool_node = ToolNode(tools=tools)
 
@@ -62,13 +73,56 @@ def llm_node(state: MessagesState):
     return {"messages": messages + [response]}
 
 
+# def process_tool_outputs(state: MessagesState):
+#     messages = state["messages"]
+#     last_message = messages[-1]
+
+#     # Check if the last message contains tool output information
+#     if hasattr(last_message, "additional_kwargs") and "tool_calls" in last_message.additional_kwargs:
+#         tool_calls = last_message.additional_kwargs["tool_calls"]
+#         for tool_call in tool_calls:
+#             # If it's the read_local_file tool, add metadata to be used by Chainlit
+#             if tool_call.get("name") == "read_local_file":
+#                 # Add metadata to the message that will be used by Chainlit
+#                 if "metadata" not in last_message.additional_kwargs:
+#                     last_message.additional_kwargs["metadata"] = {}
+#                 last_message.additional_kwargs["metadata"]["file_content"] = tool_call.get("output", "")
+
+#     return {"messages": messages}
+
+
+def command_determination_node(state: MessagesState):
+    messages = state["messages"]
+    last_message = messages[-1]
+
+    # Check if message content indicates a command request
+    if isinstance(last_message, HumanMessage) and any(
+        keyword in last_message.content.lower()
+        for keyword in ["run command", "execute", "linux command", "shell command"]
+    ):
+        # Use the linux_command_determination prompt
+        command_chain = prompts.linux_command_determination | llm | StrOutputParser()
+        command = command_chain.invoke({"question": last_message.content})
+
+        # Create a message with the determined command
+        command_message = AIMessage(content=f"I'll execute this command: `{command}`")
+        return {"messages": messages + [command_message], "command": command}
+
+    # If not a command request, just pass through
+    return {"messages": messages, "command": None}
+
+
 builder = StateGraph(MessagesState)
 
 builder.add_node("llm", llm_node)
 builder.add_node("tools", tool_node)
+builder.add_node("command_determination", command_determination_node)
+# builder.add_node("process", process_tool_outputs)
 
 builder.add_edge(START, "llm")
 builder.add_edge("llm", "tools")
+builder.add_edge("llm", "command_determination")
+# builder.add_edge("tools", "process")
 builder.add_edge("tools", END)
 
 graph = builder.compile()
