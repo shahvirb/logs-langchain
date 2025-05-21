@@ -53,19 +53,19 @@ graph = builder.compile()
 async def on_message(message: cl.Message):
     config = {"configurable": {"thread_id": cl.context.session.id}}
     cb = cl.LangchainCallbackHandler()
-    msg = cl.Message(content="")
+    msg = cl.Message(content=message.content)
 
-    # Example conversion inside on_message
-    for state, metadata in graph.stream(
+    state = graph.invoke(
         {"messages": [HumanMessage(content=msg.content)]},
-        stream_mode="messages",
         config=RunnableConfig(callbacks=[cb], **config),
-    ):
-        for msg in state["messages"]:
-            cl_msg = cl.Message(content=msg.content)
-            await cl_msg.send()
+    )
+    # Only send the last message (assistant's response)
+    if state["messages"]:
+        cl_msg = cl.Message(content=state["messages"][-1].content)
+        await cl_msg.send()
 
 
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
+
     run_chainlit(__file__)
