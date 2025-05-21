@@ -73,24 +73,6 @@ def llm_node(state: MessagesState):
     return {"messages": messages + [response]}
 
 
-# def process_tool_outputs(state: MessagesState):
-#     messages = state["messages"]
-#     last_message = messages[-1]
-
-#     # Check if the last message contains tool output information
-#     if hasattr(last_message, "additional_kwargs") and "tool_calls" in last_message.additional_kwargs:
-#         tool_calls = last_message.additional_kwargs["tool_calls"]
-#         for tool_call in tool_calls:
-#             # If it's the read_local_file tool, add metadata to be used by Chainlit
-#             if tool_call.get("name") == "read_local_file":
-#                 # Add metadata to the message that will be used by Chainlit
-#                 if "metadata" not in last_message.additional_kwargs:
-#                     last_message.additional_kwargs["metadata"] = {}
-#                 last_message.additional_kwargs["metadata"]["file_content"] = tool_call.get("output", "")
-
-#     return {"messages": messages}
-
-
 def command_determination_node(state: MessagesState):
     messages = state["messages"]
     last_message = messages[-1]
@@ -117,23 +99,14 @@ builder = StateGraph(MessagesState)
 builder.add_node("llm", llm_node)
 builder.add_node("tools", tool_node)
 builder.add_node("command_determination", command_determination_node)
-# builder.add_node("process", process_tool_outputs)
 
 builder.add_edge(START, "llm")
 builder.add_edge("llm", "tools")
 builder.add_edge("llm", "command_determination")
-# builder.add_edge("tools", "process")
+
 builder.add_edge("tools", END)
 
 graph = builder.compile()
-
-
-# @cl.on_chat_start
-# async def on_chat_start():
-#     google_factory = factory.GoogleFactory()
-#     llm = google_factory.llm()
-#     cl.user_session.set("llm", llm)
-#     logger.info("LLM initialized")
 
 
 @cl.on_message
