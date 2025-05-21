@@ -22,7 +22,7 @@ def welcome(state: MessagesState):
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", "You are a helpful assistant. Greet the user politely."),
-            ("human", "Say hello and welcome the user."),
+            ("human", "Welcome the user."),
         ]
     )
     runnable = prompt | llm | StrOutputParser()
@@ -55,33 +55,17 @@ async def on_message(message: cl.Message):
     cb = cl.LangchainCallbackHandler()
     msg = cl.Message(content="")
 
-    for msg, metadata in graph.stream(
+    # Example conversion inside on_message
+    for state, metadata in graph.stream(
         {"messages": [HumanMessage(content=msg.content)]},
         stream_mode="messages",
         config=RunnableConfig(callbacks=[cb], **config),
     ):
-        if (
-            msg.content
-            # and not isinstance(msg, HumanMessage)
-            # and metadata["langgraph_node"] == "final"
-        ):
-            await msg.stream_token(msg.content)
+        for msg in state["messages"]:
+            cl_msg = cl.Message(content=msg.content)
+            await cl_msg.send()
 
-    # prompt = ChatPromptTemplate.from_messages(
-    #     [
-    #         (
-    #             "system",
-    #             "You're a very knowledgeable historian who provides accurate and eloquent answers to historical questions.",
-    #         ),
-    #         ("human", "{question}"),
-    #     ]
-    # )
-    # runnable = prompt | llm | StrOutputParser()
 
-    # async for chunk in runnable.astream(
-    #     {"question": message.content},
-    #     config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
-    # ):
-    #     await msg.stream_token(chunk)
-
-    await msg.send()
+if __name__ == "__main__":
+    from chainlit.cli import run_chainlit
+    run_chainlit(__file__)
