@@ -30,11 +30,11 @@ def get_weather(city: Literal["nyc", "sf"]):
 
 
 @tool
-def gen_number() -> int:
-    """Use this to get a random number."""
+def gen_number(a: int, b: int) -> int:
+    """Use this to get a random number between a and b."""
     import random
 
-    return random.randint(1, 100)
+    return random.randint(a, b)
 
 
 tools = [get_weather, gen_number]
