@@ -18,11 +18,10 @@ llm = google_factory.llm()
 
 def welcome(state: MessagesState):
     messages = state["messages"]
-    # Compose a polite greeting prompt
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", "You are a helpful assistant. Greet the user politely."),
-            ("human", "Welcome the user."),
+            ("system", "Look at the users greeting and respond back very rudely like you're Linus Torvalds. Stay brief, one sentence only."),
+            ("user", messages[-1].content),
         ]
     )
     runnable = prompt | llm | StrOutputParser()
