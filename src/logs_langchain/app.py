@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langchain_core.tools import tool
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable.config import RunnableConfig
@@ -6,12 +6,13 @@ from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
 from logs_langchain import factory, prompts
-from typing import cast, Literal
+from typing import cast, TypedDict, List, Optional, Literal
 import chainlit as cl
 import logging
 
 logger = logging.getLogger(__name__)
 
+# TODO don't use globals, use the cl.user_session
 google_factory = factory.GoogleFactory()
 llm = google_factory.llm()
 
@@ -67,59 +68,129 @@ tool_node = ToolNode(tools=tools)
 #     return {"messages": [response]}
 
 
-def llm_node(state: MessagesState):
+class RouterMessagesState(TypedDict):
+    """State that contains both message history and routing information."""
+
+    messages: List[BaseMessage]
+    intent: Optional[Literal["weather", "number", "file", "general"]]
+
+
+def llm_node(state: RouterMessagesState):
     messages = state["messages"]
     response = llm.invoke(messages)
     return {"messages": messages + [response]}
 
 
-def command_determination_node(state: MessagesState):
+# def command_determination_node(state: RouterMessagesState):
+#     messages = state["messages"]
+#     last_message = messages[-1]
+
+#     # Use the linux_command_determination prompt
+#     command_chain = prompts.linux_command_determination | llm | StrOutputParser()
+#     command = command_chain.invoke({"question": last_message.content})
+
+#     # Create a message with the determined command
+#     command_message = AIMessage(content=f"I'll execute this command: `{command}`")
+#     return {"messages": messages + [command_message], "command": command}
+
+
+def intent_classifier_node(state: RouterMessagesState):
+    """Determines the user's intent from their message."""
     messages = state["messages"]
     last_message = messages[-1]
 
-    # Check if message content indicates a command request
-    if isinstance(last_message, HumanMessage) and any(
-        keyword in last_message.content.lower()
-        for keyword in ["run command", "execute", "linux command", "shell command"]
-    ):
-        # Use the linux_command_determination prompt
-        command_chain = prompts.linux_command_determination | llm | StrOutputParser()
-        command = command_chain.invoke({"question": last_message.content})
+    if not isinstance(last_message, HumanMessage):
+        logger.debug("Last message is not a HumanMessage. Intent: None")
+        return {"intent": None}
 
-        # Create a message with the determined command
-        command_message = AIMessage(content=f"I'll execute this command: `{command}`")
-        return {"messages": messages + [command_message], "command": command}
+    content = last_message.content.lower()
 
-    # If not a command request, just pass through
-    return {"messages": messages, "command": None}
+    # TODO this should be re-written to use the llm instead of naive keyword matching
+    # Simple keyword-based routing
+    intent = "general"
+    if any(word in content for word in ["weather", "temperature", "forecast"]):
+        intent = "weather"
+    elif any(word in content for word in ["number", "random", "generate"]):
+        intent = "number"
+    elif any(word in content for word in ["file", "read", "open"]):
+        intent = "file"
+    logger.debug(f"Intent classified as '{intent}' for message: {content}")
+    return {"intent": intent}
 
 
-builder = StateGraph(MessagesState)
+def build_state_graph(tool_node, llm_node, command_determination_node):
+    builder = StateGraph(RouterMessagesState)
 
-builder.add_node("llm", llm_node)
-builder.add_node("tools", tool_node)
-builder.add_node("command_determination", command_determination_node)
+    # Add nodes
+    builder.add_node("classifier", intent_classifier_node)
+    builder.add_node("llm", llm_node)
+    builder.add_node("tools", tool_node)
 
-builder.add_edge(START, "llm")
-builder.add_edge("llm", "tools")
-builder.add_edge("llm", "command_determination")
+    # Set the START node
+    builder.add_edge(START, "classifier")
 
-builder.add_edge("tools", END)
+    # Add conditional edges from classifier to appropriate nodes
+    builder.add_conditional_edges(
+        "classifier",
+        lambda state: state["intent"],
+        {
+            "weather": "tools",  # Tool will handle based on tool name
+            "number": "tools",  # Tool will handle based on tool name
+            "file": "tools",  # Tool will handle based on tool name
+            "general": "llm",
+        },
+    )
 
-graph = builder.compile()
+    # Add END edges
+    builder.add_edge("tools", END)
+    builder.add_edge("llm", END)
+
+    return builder.compile()
+
+
+@cl.on_chat_start
+async def start_chat():
+    graph = build_state_graph(tool_node, llm_node, command_determination_node)
+    cl.user_session.set("graph", graph)
 
 
 @cl.on_message
 async def on_message(message: cl.Message):
+    graph = cl.user_session.get("graph")
     config = {"configurable": {"thread_id": cl.context.session.id}}
     cb = cl.LangchainCallbackHandler()
-    msg = cl.Message(content=message.content)
 
+    # Old starts here
+    # msg = cl.Message(content=message.content)
+    # state = graph.invoke(
+    #     {"messages": [HumanMessage(content=msg.content)]},
+    #     config=RunnableConfig(callbacks=[cb], **config),
+    # )
+    # # Only send the last message (assistant's response)
+    # if state["messages"]:
+    #     cl_msg = cl.Message(content=state["messages"][-1].content)
+    #     await cl_msg.send()
+    # Old ends here
+
+    # Get existing messages (if any)
+    existing_messages = cl.user_session.get("messages", [])
+
+    # Add the new message
+    current_messages = existing_messages + [HumanMessage(content=message.content)]
+
+    # Save the updated messages in the session
+    cl.user_session.set("messages", current_messages)
+
+    # Run the graph
     state = graph.invoke(
-        {"messages": [HumanMessage(content=msg.content)]},
+        {"messages": current_messages, "intent": None, "command": None},
         config=RunnableConfig(callbacks=[cb], **config),
     )
-    # Only send the last message (assistant's response)
+
+    # Update session with the latest messages
+    cl.user_session.set("messages", state["messages"])
+
+    # Send the response
     if state["messages"]:
         cl_msg = cl.Message(content=state["messages"][-1].content)
         await cl_msg.send()
