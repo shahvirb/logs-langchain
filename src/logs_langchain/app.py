@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # TODO don't use globals, use the cl.user_session
 google_factory = factory.GoogleFactory()
-llm = google_factory.llm()
+llm = google_factory.llm(model="gemini-2.5-flash-preview-05-20")
 
 
 @tool
@@ -51,7 +51,6 @@ def read_local_file(file_path: str) -> str:
 
 tools = [get_weather, gen_number, read_local_file]
 llm = llm.bind_tools(tools)
-tool_node = ToolNode(tools=tools)
 
 # def welcome(state: MessagesState):
 #     messages = state["messages"]
@@ -118,12 +117,13 @@ def intent_classifier_node(state: RouterMessagesState):
     return {"intent": intent}
 
 
-def build_state_graph(tool_node, llm_node, command_determination_node):
+def build_state_graph():
     builder = StateGraph(RouterMessagesState)
 
     # Add nodes
     builder.add_node("classifier", intent_classifier_node)
     builder.add_node("llm", llm_node)
+    tool_node = ToolNode(tools=tools)
     builder.add_node("tools", tool_node)
 
     # Set the START node
@@ -150,7 +150,7 @@ def build_state_graph(tool_node, llm_node, command_determination_node):
 
 @cl.on_chat_start
 async def start_chat():
-    graph = build_state_graph(tool_node, llm_node, command_determination_node)
+    graph = build_state_graph()
     cl.user_session.set("graph", graph)
 
 
@@ -199,4 +199,5 @@ async def on_message(message: cl.Message):
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
 
+    logging.basicConfig(level=logging.DEBUG)
     run_chainlit(__file__)
