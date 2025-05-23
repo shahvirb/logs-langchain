@@ -52,20 +52,6 @@ def read_local_file(file_path: str) -> str:
 tools = [get_weather, gen_number, read_local_file]
 llm = llm.bind_tools(tools)
 
-# def welcome(state: MessagesState):
-#     messages = state["messages"]
-#     prompt = ChatPromptTemplate.from_messages(
-#         [
-#             ("system", "Look at the users greeting and respond back very rudely like you're Linus Torvalds. Stay brief, one sentence only."),
-#             ("user", messages[-1].content),
-#         ]
-#     )
-#     runnable = prompt | llm | StrOutputParser()
-#     response_text = runnable.invoke({})
-#     response = SystemMessage(content=response_text)
-#     # TODO should we return all the messages or just the new one?
-#     return {"messages": [response]}
-
 
 class RouterMessagesState(TypedDict):
     """State that contains both message history and routing information."""
@@ -77,73 +63,37 @@ class RouterMessagesState(TypedDict):
 def llm_node(state: RouterMessagesState):
     messages = state["messages"]
     response = llm.invoke(messages)
-    return {"messages": messages + [response]}
+    return {"messages": [response]}
+    # return {"messages": messages + [response]}
 
 
-# def command_determination_node(state: RouterMessagesState):
-#     messages = state["messages"]
-#     last_message = messages[-1]
-
-#     # Use the linux_command_determination prompt
-#     command_chain = prompts.linux_command_determination | llm | StrOutputParser()
-#     command = command_chain.invoke({"question": last_message.content})
-
-#     # Create a message with the determined command
-#     command_message = AIMessage(content=f"I'll execute this command: `{command}`")
-#     return {"messages": messages + [command_message], "command": command}
-
-
-def intent_classifier_node(state: RouterMessagesState):
-    """Determines the user's intent from their message."""
+def should_use_tools_node(state: RouterMessagesState) -> Literal["tools", "end"]:
     messages = state["messages"]
     last_message = messages[-1]
-
-    if not isinstance(last_message, HumanMessage):
-        logger.debug("Last message is not a HumanMessage. Intent: None")
-        return {"intent": None}
-
-    content = last_message.content.lower()
-
-    # TODO this should be re-written to use the llm instead of naive keyword matching
-    # Simple keyword-based routing
-    intent = "general"
-    if any(word in content for word in ["weather", "temperature", "forecast"]):
-        intent = "weather"
-    elif any(word in content for word in ["number", "random", "generate"]):
-        intent = "number"
-    elif any(word in content for word in ["file", "read", "open"]):
-        intent = "file"
-    logger.debug(f"Intent classified as '{intent}' for message: {content}")
-    return {"intent": intent}
+    # If the LLM makes a tool call, then we route to the "tools" node
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    # Otherwise, we end the graph execution
+    return "end"
 
 
 def build_state_graph():
     builder = StateGraph(RouterMessagesState)
 
-    # Add nodes
-    builder.add_node("classifier", intent_classifier_node)
     builder.add_node("llm", llm_node)
     tool_node = ToolNode(tools=tools)
     builder.add_node("tools", tool_node)
 
-    # Set the START node
-    builder.add_edge(START, "classifier")
-
-    # Add conditional edges from classifier to appropriate nodes
+    builder.add_edge(START, "llm")
     builder.add_conditional_edges(
-        "classifier",
-        lambda state: state["intent"],
+        "llm",
+        should_use_tools_node,
         {
-            "weather": "tools",  # Tool will handle based on tool name
-            "number": "tools",  # Tool will handle based on tool name
-            "file": "tools",  # Tool will handle based on tool name
-            "general": "llm",
+            "tools": "tools",  # Route to tools node
+            "end": END,  # End execution
         },
     )
-
-    # Add END edges
-    builder.add_edge("tools", END)
-    builder.add_edge("llm", END)
+    # builder.add_edge("tools", "llm")
 
     return builder.compile()
 
@@ -160,18 +110,6 @@ async def on_message(message: cl.Message):
     config = {"configurable": {"thread_id": cl.context.session.id}}
     cb = cl.LangchainCallbackHandler()
 
-    # Old starts here
-    # msg = cl.Message(content=message.content)
-    # state = graph.invoke(
-    #     {"messages": [HumanMessage(content=msg.content)]},
-    #     config=RunnableConfig(callbacks=[cb], **config),
-    # )
-    # # Only send the last message (assistant's response)
-    # if state["messages"]:
-    #     cl_msg = cl.Message(content=state["messages"][-1].content)
-    #     await cl_msg.send()
-    # Old ends here
-
     # Get existing messages (if any)
     existing_messages = cl.user_session.get("messages", [])
 
@@ -182,8 +120,9 @@ async def on_message(message: cl.Message):
     cl.user_session.set("messages", current_messages)
 
     # Run the graph
+    # TODO why intent none here?
     state = graph.invoke(
-        {"messages": current_messages, "intent": None, "command": None},
+        {"messages": current_messages, "intent": None},
         config=RunnableConfig(callbacks=[cb], **config),
     )
 
