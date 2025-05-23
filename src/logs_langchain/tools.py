@@ -1,5 +1,6 @@
 from langchain_core.tools import tool
 from typing import Literal
+from logs_langchain import ssh, hosts
 
 
 @tool
@@ -46,5 +47,12 @@ def ping(ipaddr_or_hostname) -> bool:
         return False
 
 
-# Export all tools in a list for easy import
-tools = [get_weather, gen_number, read_local_file, ping]
+@tool
+def ssh_command(host: str, command: str) -> str:
+    """Use this to run a command on a remote server via SSH. It returns a string with the command output."""
+    host_info = hosts.HOSTS[host]
+    with ssh.SSHClient(host, host_info["username"], host_info["key_file"]) as client:
+        return client.run_command(command)
+
+
+all = [get_weather, gen_number, read_local_file, ping, ssh_command]

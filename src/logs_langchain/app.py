@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 # TODO don't use globals, use the cl.user_session
 google_factory = factory.GoogleFactory()
 llm = google_factory.llm(model="gemini-2.5-flash-preview-05-20")
-
-llm = llm.bind_tools(tools)
+llm = llm.bind_tools(tools.all)
 
 
 def llm_node(state: MessagesState):
@@ -39,7 +38,7 @@ def build_state_graph():
     builder = StateGraph(MessagesState)
 
     builder.add_node("llm", llm_node)
-    tool_node = ToolNode(tools=tools)
+    tool_node = ToolNode(tools=tools.all)
     builder.add_node("tools", tool_node)
 
     builder.add_edge(START, "llm")
