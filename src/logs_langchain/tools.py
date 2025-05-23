@@ -12,17 +12,6 @@ def get_user_consent(prompt_message):
 
 
 @tool
-def get_weather(city: Literal["nyc", "sf"]):
-    """Use this to get weather information."""
-    if city == "nyc":
-        return "It might be cloudy in nyc"
-    elif city == "sf":
-        return "It's always sunny in sf"
-    else:
-        raise AssertionError("Unknown city")
-
-
-@tool
 def gen_number(a: int, b: int) -> int:
     """Use this to get a random number between a and b."""
     import random
@@ -63,13 +52,5 @@ def ssh_command(host: str, command: str) -> str:
     with ssh.SSHClient(host, host_info["username"], host_info["key_file"]) as client:
         return client.run_command(command)
 
-@tool
-# let's write a tool here which returns a random character
-def random_character() -> str:
-    """Use this to get a random character."""
-    import random
-    import string
 
-    return random.choice(string.ascii_letters)
-
-all = [get_weather, gen_number, read_local_file, ping, ssh_command, random_character]
+all = [gen_number, read_local_file, ping, ssh_command]
