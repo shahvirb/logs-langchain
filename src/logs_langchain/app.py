@@ -53,21 +53,14 @@ tools = [get_weather, gen_number, read_local_file]
 llm = llm.bind_tools(tools)
 
 
-class RouterMessagesState(TypedDict):
-    """State that contains both message history and routing information."""
-
-    messages: List[BaseMessage]
-    intent: Optional[Literal["weather", "number", "file", "general"]]
-
-
-def llm_node(state: RouterMessagesState):
+def llm_node(state: MessagesState):
     messages = state["messages"]
     response = llm.invoke(messages)
     return {"messages": [response]}
     # return {"messages": messages + [response]}
 
 
-def should_use_tools_node(state: RouterMessagesState) -> Literal["tools", "end"]:
+def should_use_tools_node(state: MessagesState) -> Literal["tools", "end"]:
     messages = state["messages"]
     last_message = messages[-1]
     # If the LLM makes a tool call, then we route to the "tools" node
@@ -78,7 +71,7 @@ def should_use_tools_node(state: RouterMessagesState) -> Literal["tools", "end"]
 
 
 def build_state_graph():
-    builder = StateGraph(RouterMessagesState)
+    builder = StateGraph(MessagesState)
 
     builder.add_node("llm", llm_node)
     tool_node = ToolNode(tools=tools)
