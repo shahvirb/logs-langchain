@@ -48,8 +48,17 @@ def read_local_file(file_path: str) -> str:
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
+@tool
+def ping(ipaddr_or_hostname) -> bool:
+    """Use this to ping a server. It returns True if the server is reachable, False otherwise."""
+    import subprocess
+    try:
+        output = subprocess.check_output(["ping", "-c", "1", ipaddr_or_hostname])
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
-tools = [get_weather, gen_number, read_local_file]
+tools = [get_weather, gen_number, read_local_file, ping]
 llm = llm.bind_tools(tools)
 
 
