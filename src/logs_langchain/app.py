@@ -1,11 +1,10 @@
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
-from langchain_core.tools import tool
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable.config import RunnableConfig
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
-from logs_langchain import factory, prompts
+from logs_langchain import factory, prompts, tools
 from typing import cast, TypedDict, List, Optional, Literal
 import chainlit as cl
 import logging
@@ -16,49 +15,6 @@ logger = logging.getLogger(__name__)
 google_factory = factory.GoogleFactory()
 llm = google_factory.llm(model="gemini-2.5-flash-preview-05-20")
 
-
-@tool
-def get_weather(city: Literal["nyc", "sf"]):
-    """Use this to get weather information."""
-    if city == "nyc":
-        return "It might be cloudy in nyc"
-    elif city == "sf":
-        return "It's always sunny in sf"
-    else:
-        raise AssertionError("Unknown city")
-
-
-@tool
-def gen_number(a: int, b: int) -> int:
-    """Use this to get a random number between a and b."""
-    import random
-
-    return random.randint(a, b)
-
-
-@tool
-def read_local_file(file_path: str) -> str:
-    """Use this tool to read the contents of a local file when the user asks to read a file.
-    The file_path should be a valid path on the local system.
-    If the file doesn't exist or can't be read, this will return an error message."""
-    try:
-        with open(file_path, "r") as f:
-            content = f.read()
-        return content
-    except Exception as e:
-        return f"Error reading file: {str(e)}"
-
-@tool
-def ping(ipaddr_or_hostname) -> bool:
-    """Use this to ping a server. It returns True if the server is reachable, False otherwise."""
-    import subprocess
-    try:
-        output = subprocess.check_output(["ping", "-c", "1", ipaddr_or_hostname])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-tools = [get_weather, gen_number, read_local_file, ping]
 llm = llm.bind_tools(tools)
 
 
