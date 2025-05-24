@@ -103,5 +103,9 @@ expert_linux_debugger = ChatPromptTemplate.from_messages(
 
 
 explain_command_result = HumanMessage(
-    "Explain the result of the command execution in the above history. Show the command run, its output, and then explain its output quickly."
+    """
+    You are an expert sysadmin speaking to another sysadmin about the above chat history. You will reply back in this format:
+    Show the user the command you ran and its output.
+    Then explain the command output in detail, including any supporting evidence if necessary.
+    """
 )

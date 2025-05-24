@@ -34,6 +34,8 @@ def should_use_tools_node(state: MessagesState) -> Literal["tools", "__end__"]:
 
 def explain_node(state: MessagesState) -> MessagesState:
     messages = state["messages"]
+    # tool_result = messages[-1].content
+    # call = messages[-2]
     response = llm.invoke(messages + [prompts.explain_command_result])
     return {"messages": [response]}
 
