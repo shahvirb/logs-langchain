@@ -91,7 +91,7 @@ expert_linux_debugger = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command and its output to deduce the answer to their question. Always begin by giving a one sentence  conclusion. Then explain rationale with supporting evidence provided. If they refer to a hostname or server name you may always assume you are inside the server.
+            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command and its output to deduce the answer to their question. If they refer to a hostname or server name you may always assume you are inside the server. Always begin by showing the command which was run and its output then explain quickly.
             """,
         ),
         (
