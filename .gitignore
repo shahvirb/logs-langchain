@@ -175,6 +175,9 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+# Ignore langgraph_api as that has artifacts of running langgraph studio
+.langgraph_api
+
 .env
 yourkeyhere
 temp/

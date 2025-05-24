@@ -1,0 +1,6 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "chat": "./src/logs_langchain/app.py:build_state_graph"
+  }
+}
