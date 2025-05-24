@@ -97,5 +97,5 @@ async def on_message(message: cl.Message):
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
 
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
     run_chainlit(__file__)

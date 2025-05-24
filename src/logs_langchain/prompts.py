@@ -103,5 +103,5 @@ expert_linux_debugger = ChatPromptTemplate.from_messages(
 
 
 explain_command_result = HumanMessage(
-    "Explain the result of the command execution in the above history. Show the command run and explain its output quickly."
+    "Explain the result of the command execution in the above history. Show the command run, its output, and then explain its output quickly."
 )
