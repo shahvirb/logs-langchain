@@ -17,7 +17,7 @@ llm = google_factory.llm(model="gemini-2.5-flash-preview-05-20")
 llm = llm.bind_tools(tools.all)
 
 
-def llm_node(state: MessagesState) -> MessagesState:
+def general_chat_node(state: MessagesState) -> MessagesState:
     messages = state["messages"]
     response = llm.invoke(messages)
     return {"messages": [response]}
@@ -41,18 +41,18 @@ def explain_node(state: MessagesState) -> MessagesState:
 def build_state_graph():
     builder = StateGraph(MessagesState)
 
-    builder.add_node("llm", llm_node)
+    builder.add_node("general_chat", general_chat_node)
     tool_node = ToolNode(tools=tools.all)
     builder.add_node("tools", tool_node)
     builder.add_node("explain", explain_node)
 
-    builder.add_edge(START, "llm")
+    builder.add_edge(START, "general_chat")
     builder.add_conditional_edges(
-        "llm",
+        "general_chat",
         should_use_tools_node,
     )
     builder.add_edge("tools", "explain")
-    # builder.add_edge("tools", "llm")
+    # builder.add_edge("tools", "general_chat")
 
     return builder.compile()
 
