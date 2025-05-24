@@ -24,12 +24,20 @@ def general_chat_node(state: MessagesState) -> MessagesState:
     # return {"messages": messages + [response]}
 
 
-def should_use_tools_node(state: MessagesState) -> Literal["tools", "__end__"]:
+def router_tools_node(state: MessagesState) -> Literal["tools", "__end__"]:
     messages = state["messages"]
     last_message = messages[-1]
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
     return "__end__"
+
+
+def router_explain_node(state: MessagesState) -> Literal["explain", "ssh_explain"]:
+    messages = state["messages"]
+    last_message = messages[-1]
+    if last_message.name == "ssh_command":
+        return "ssh_explain"
+    return "explain"
 
 
 def explain_node(state: MessagesState) -> MessagesState:
@@ -40,6 +48,21 @@ def explain_node(state: MessagesState) -> MessagesState:
     return {"messages": [response]}
 
 
+def ssh_explain_node(state: MessagesState) -> MessagesState:
+    messages = state["messages"]
+    question = messages[-3].content
+    command = messages[-2].tool_calls[0].get("args").get("command")
+    output = messages[-1].content
+
+    response = llm.invoke(
+        messages
+        + prompts.expert_linux_debugger.format_messages(
+            question=question, command=command, output=output
+        )
+    )
+    return {"messages": [response]}
+
+
 def build_state_graph():
     builder = StateGraph(MessagesState)
 
@@ -47,14 +70,18 @@ def build_state_graph():
     tool_node = ToolNode(tools=tools.all)
     builder.add_node("tools", tool_node)
     builder.add_node("explain", explain_node)
+    builder.add_node("ssh_explain", ssh_explain_node)
 
     builder.add_edge(START, "general_chat")
     builder.add_conditional_edges(
         "general_chat",
-        should_use_tools_node,
+        router_tools_node,
     )
-    builder.add_edge("tools", "explain")
-    # builder.add_edge("tools", "general_chat")
+
+    builder.add_conditional_edges(
+        "tools",
+        router_explain_node,
+    )
 
     return builder.compile()
 
@@ -88,7 +115,7 @@ async def on_message(message: cl.Message):
     )
 
     # Update session with the latest messages
-    cl.user_session.set("messages", state["messages"])
+    cl.user_session.set("messages", current_messages + state["messages"])
 
     # Send the response
     if state["messages"]:
