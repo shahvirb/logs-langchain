@@ -17,21 +17,25 @@ llm = google_factory.llm(model="gemini-2.5-flash-preview-05-20")
 llm = llm.bind_tools(tools.all)
 
 
-def llm_node(state: MessagesState):
+def llm_node(state: MessagesState) -> MessagesState:
     messages = state["messages"]
     response = llm.invoke(messages)
     return {"messages": [response]}
     # return {"messages": messages + [response]}
 
 
-def should_use_tools_node(state: MessagesState) -> Literal["tools", "end"]:
+def should_use_tools_node(state: MessagesState) -> Literal["tools", "__end__"]:
     messages = state["messages"]
     last_message = messages[-1]
-    # If the LLM makes a tool call, then we route to the "tools" node
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
-    # Otherwise, we end the graph execution
-    return "end"
+    return "__end__"
+
+
+def explain_node(state: MessagesState) -> MessagesState:
+    messages = state["messages"]
+    response = llm.invoke(messages + [prompts.explain_command_result])
+    return {"messages": [response]}
 
 
 def build_state_graph():
@@ -40,16 +44,14 @@ def build_state_graph():
     builder.add_node("llm", llm_node)
     tool_node = ToolNode(tools=tools.all)
     builder.add_node("tools", tool_node)
+    builder.add_node("explain", explain_node)
 
     builder.add_edge(START, "llm")
     builder.add_conditional_edges(
         "llm",
         should_use_tools_node,
-        {
-            "tools": "tools",  # Route to tools node
-            "end": END,  # End execution
-        },
     )
+    builder.add_edge("tools", "explain")
     # builder.add_edge("tools", "llm")
 
     return builder.compile()

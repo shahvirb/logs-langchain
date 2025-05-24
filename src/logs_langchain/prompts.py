@@ -1,4 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -98,4 +99,9 @@ expert_linux_debugger = ChatPromptTemplate.from_messages(
             "Question: {question}\nDebug Command: {command}\nOutput of running debug command:\n{output}",
         ),
     ]
+)
+
+
+explain_command_result = HumanMessage(
+    "Explain the result of the command execution in the above history. Show the command run and explain its output quickly."
 )
