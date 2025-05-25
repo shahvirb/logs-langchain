@@ -108,14 +108,14 @@ async def on_message(message: cl.Message):
     cl.user_session.set("messages", current_messages)
 
     # Run the graph
-    # TODO why intent none here?
     state = graph.invoke(
-        {"messages": current_messages, "intent": None},
-        config=RunnableConfig(callbacks=[cb], **config),
+        {"messages": current_messages},
+        config=RunnableConfig(callbacks=[cb],
+        **config),
     )
 
     # Update session with the latest messages
-    cl.user_session.set("messages", current_messages + state["messages"])
+    cl.user_session.set("messages", state["messages"])
 
     # Send the response
     if state["messages"]:
