@@ -109,3 +109,30 @@ explain_command_result = HumanMessage(
     Then explain the command output in detail, including any supporting evidence if necessary.
     """
 )
+
+
+class DangerousCommand(BaseModel):
+    is_dangerous: bool = Field(
+        description="True if the command is dangerous, False otherwise."
+    )
+
+
+dangerous_command_verification = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            You are a security-conscious AI review assistant. Your task is to review the user's request and determine if it involves executing a potentially dangerous command that could harm the system or data integrity.
+            A command is considered dangerous if it has the potential to:
+            - Delete files or directories
+            - Modify system configurations
+            - Change user permissions
+            - Stop critical services
+            
+            Respect these format instructions for your return value formatting:
+            {format_instructions}
+            """,
+        ),
+        ("user", "Command: {command}"),
+    ]
+)
