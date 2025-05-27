@@ -68,7 +68,10 @@ def ssh_explain_node(state: MessagesState) -> MessagesState:
             question=question, command=command, output=output
         )
     )
-    return {"messages": [response]}
+
+    # Let's always show an AIMessage with the command and output
+    display_command = AIMessage(content=f"Command: {command}\nOutput:\n{output}")
+    return {"messages": [display_command, response]}
 
 
 def dangerous_command_verification_node(state: MessagesState) -> MessagesState:
@@ -86,20 +89,20 @@ def dangerous_command_verification_node(state: MessagesState) -> MessagesState:
     return {
         "messages": [
             AIMessage(
-                content="This command is dangerous and cannot be executed. Please modify your request."
+                content=f"Cannot proceed.\nThe command `{command}` is considered dangerous.\nReason: {response.reason or 'No specific reason provided.'}"
             )
         ]
     }
     # TODO maybe we should raise a consent check flag here so that the user can still force the command
 
 
-def router_after_verification(state: MessagesState) -> Literal["tools", "general_chat"]:
+def router_after_verification(state: MessagesState) -> Literal["tools", "__end__"]:
     messages = state["messages"]
     last_message = messages[-1]
 
     # If the last message is an AIMessage saying the command is dangerous
     if isinstance(last_message, AIMessage) and "dangerous" in last_message.content:
-        return "general_chat"
+        return "__end__"
     # Otherwise it's the original tool call put back in messages
     else:
         return "tools"

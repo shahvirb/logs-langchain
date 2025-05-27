@@ -91,7 +91,7 @@ expert_linux_debugger = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command and its output to deduce the answer to their question. If they refer to a hostname or server name you may always assume you are inside the server. Always begin by showing the command which was run and its output then explain quickly.
+            You are an expert Linux debugger. Analyze the user's problem and reference the provided debugging command and its output to deduce the answer to their question. If they refer to a hostname or server name you may always assume you are inside the server. Always begin by showing the command which was run and its output then explain quickly whether this addressed their question.
             """,
         ),
         (
@@ -114,6 +114,10 @@ explain_command_result = HumanMessage(
 class DangerousCommand(BaseModel):
     is_dangerous: bool = Field(
         description="True if the command is dangerous, False otherwise."
+    )
+    reason: Optional[str] = Field(
+        default=None,
+        description="An optional reason explaining why the command is considered dangerous.",
     )
 
 
