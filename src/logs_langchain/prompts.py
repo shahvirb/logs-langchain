@@ -129,6 +129,7 @@ dangerous_command_verification = ChatPromptTemplate.from_messages(
             You are a security-conscious AI review assistant. Your task is to review the user's request and determine if it involves executing a potentially dangerous command that could harm the system or data integrity.
             A command is considered dangerous if it has the potential to:
             - Delete files or directories
+            - Writing new files, editing files, touching files.
             - Modify system configurations
             - Change user permissions
             - Stop critical services
